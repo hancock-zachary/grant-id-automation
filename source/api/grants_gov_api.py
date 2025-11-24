@@ -3,13 +3,13 @@ Grants.gov API Client
 """
 #%% Import modules and libraries
 # First-party libraries
+from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta
 import json
+import logging
 import time
 
 # Third-party libraries
-from dataclasses import dataclass, asdict
-import logging
 import requests
 from tqdm import tqdm
 from typing import Dict, List, Optional, Any
@@ -96,7 +96,7 @@ class GrantsGovAPIClient:
         
         while True:
             try:
-                response = self.session.get(url, params=params or {})
+                response = self.session.post(url, json=params or {})
                 response.raise_for_status()  # Raises exception for bad status codes.
                 result = response.json()
 
@@ -108,6 +108,8 @@ class GrantsGovAPIClient:
                     return []
             except requests.exceptions.HTTPError as e:
                 if response.status_code == 401:
+                    raise APIError("Authentication failed. Check your API key.") from e
+                if response.status_code == 403:
                     raise APIError("Authentication failed. Check your API key.") from e
                 elif response.status_code == 404:
                     raise APIError(f"Endpoint not found: {endpoint_name}") from e
@@ -140,7 +142,25 @@ class GrantsGovAPIClient:
 
     # Search2 Endpoint
     def search2_get_request(self):
-        return self._make_request(endpoint_name='search 2', params={}, handle_429=True)
+        """
+        """
+        search_params = {
+            "resultType": "json"
+            , "searchOnly": False
+            , "oppNum": ""
+            , "cfda": ""
+            , "sortBy": ""
+            , "oppStatuses": "forecasted|posted|closed|archived"
+            , "startRecordNum": 0
+            , "eligibilities": ""
+            , "fundingInstruments": ""
+            , "fundingCategories": ""
+            , "agencies": ""
+            , "rows": 100
+            , "keyword": ""
+            , "keywordEncoded": True
+        }
+        return self._make_request(endpoint_name='search 2', params=search_params, handle_429=True)
     
 
     # FetchOpportunity Endpoint
@@ -150,7 +170,9 @@ class GrantsGovAPIClient:
 
 #%% Example usage
 if __name__ == "__main__":
-    pass
+    client = GrantsGovAPIClient()
+    a = client.search2_get_request()
+    print(a)
 
 
 #%% End of code.
